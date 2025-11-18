@@ -18,7 +18,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/admin")
 public class UserController {
   private final UserService userService;
 
@@ -32,12 +31,12 @@ public class UserController {
     }
   }
 
-  @GetMapping("/users")
+  @GetMapping("/admin/users")
   public List<UserResponse> readUsers(){
     return userService.readUsers();
   }
 
-  @DeleteMapping("/users/{id}")
+  @DeleteMapping("/admin/users/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void deleteUser(@PathVariable String id){
     try{
