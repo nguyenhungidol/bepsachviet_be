@@ -6,6 +6,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -35,7 +36,8 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain (HttpSecurity httpSecurity) throws Exception {
     httpSecurity.cors(Customizer.withDefaults())
         .csrf(AbstractHttpConfigurer::disable)
-        .authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/encode").permitAll()
+        .authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/encode", "/registers").permitAll()
+            .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").permitAll()
             .requestMatchers("/admin/**").hasRole("ADMIN")
             .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
