@@ -6,6 +6,7 @@ import com.doan.bepsachviet_be.io.Request.ProductRequest;
 import com.doan.bepsachviet_be.io.Response.ProductResponse;
 import com.doan.bepsachviet_be.repository.CategoryRepository;
 import com.doan.bepsachviet_be.repository.ProductRepository;
+import com.doan.bepsachviet_be.service.FileUploadService;
 import com.doan.bepsachviet_be.service.ProductService;
 import java.util.List;
 import java.util.UUID;
@@ -21,6 +22,7 @@ public class ProductServiceImpl implements ProductService {
 
   private final ProductRepository productRepository;
   private final CategoryRepository categoryRepository;
+  private final FileUploadService fileUploadService;
 
   @Override
   public ProductResponse createProduct(ProductRequest request) {
@@ -50,7 +52,7 @@ public class ProductServiceImpl implements ProductService {
     }
     entity.setName(request.getName() != null ? request.getName() : entity.getName());
     entity.setDescription(request.getDescription() != null ? request.getDescription() : entity.getDescription());
-    entity.setImageSrc(request.getImageSrc() != null ? request.getImageSrc() : entity.getImageSrc());
+    handleImageMutation(entity, request.getImageSrc());
     entity.setPrice(request.getPrice() != null ? request.getPrice() : entity.getPrice());
     entity.setOcUrl(request.getOcUrl() != null ? request.getOcUrl() : entity.getOcUrl());
     return convertToResponse(productRepository.save(entity));
@@ -80,6 +82,7 @@ public class ProductServiceImpl implements ProductService {
   public void deleteProduct(String productId) {
     ProductEntity entity = productRepository.findByProductId(productId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    cleanupImage(entity.getImageSrc());
     productRepository.delete(entity);
   }
 
@@ -109,5 +112,28 @@ public class ProductServiceImpl implements ProductService {
         .updatedAt(entity.getUpdatedAt())
         .build();
   }
-}
 
+  private void handleImageMutation(ProductEntity entity, String newImageSrc) {
+    if (newImageSrc == null) {
+      return;
+    }
+
+    String trimmedNewSrc = newImageSrc.trim();
+    if (trimmedNewSrc.isBlank()) {
+      cleanupImage(entity.getImageSrc());
+      entity.setImageSrc(null);
+      return;
+    }
+    if (!trimmedNewSrc.equals(entity.getImageSrc())) {
+      cleanupImage(entity.getImageSrc());
+      entity.setImageSrc(trimmedNewSrc);
+    }
+  }
+
+  private void cleanupImage(String imageSrc) {
+    if (imageSrc == null || imageSrc.isBlank()) {
+      return;
+    }
+    fileUploadService.deleteFile(imageSrc);
+  }
+}
