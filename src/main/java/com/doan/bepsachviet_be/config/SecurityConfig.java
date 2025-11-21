@@ -36,7 +36,7 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain (HttpSecurity httpSecurity) throws Exception {
     httpSecurity.cors(Customizer.withDefaults())
         .csrf(AbstractHttpConfigurer::disable)
-        .authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/encode", "/registers").permitAll()
+        .authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/encode", "/registers", "/upload").permitAll()
             .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
             .requestMatchers("/admin/**").hasRole("ADMIN")
