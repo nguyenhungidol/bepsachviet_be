@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,8 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectResponse;
 import software.amazon.awssdk.services.s3.model.GetUrlRequest;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -68,19 +70,28 @@ public class FileUploadServiceImpl implements FileUploadService {
   public boolean deleteFile(String imgUrl) {
     Optional<String> objectKey = resolveObjectKey(imgUrl);
     if (objectKey.isEmpty()) {
+      log.warn("Could not resolve S3 object key from URL: {}", imgUrl);
       return false;
     }
 
+    String key = objectKey.get();
     try {
+      log.info("Attempting to delete S3 object with key '{}' from bucket '{}'", key, bucketName);
       DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
           .bucket(bucketName)
-          .key(objectKey.get())
+          .key(key)
           .build();
 
-      s3Client.deleteObject(deleteObjectRequest);
-      return true;
+      DeleteObjectResponse resp = s3Client.deleteObject(deleteObjectRequest);
+      boolean success = resp.sdkHttpResponse() != null && resp.sdkHttpResponse().isSuccessful();
+      if (!success) {
+        log.warn("DeleteObject returned non-successful response for key {}: {}", key, resp);
+      } else {
+        log.info("Successfully deleted S3 object '{}' from bucket '{}'", key, bucketName);
+      }
+      return success;
     } catch (S3Exception exception) {
-      log.warn("Failed to delete S3 object {} in bucket {}", objectKey.get(), bucketName, exception);
+      log.warn("Failed to delete S3 object {} in bucket {}: {}", key, bucketName, exception.awsErrorDetails() != null ? exception.awsErrorDetails().errorMessage() : exception.getMessage());
       return false;
     }
   }
@@ -94,21 +105,50 @@ public class FileUploadServiceImpl implements FileUploadService {
       URI uri = URI.create(imgUrl.trim());
       String host = uri.getHost();
       String path = uri.getPath();
-      if (host == null || path == null || path.isBlank()) {
+      if (path == null || path.isBlank()) {
         return Optional.empty();
       }
 
       String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
-      if (host.startsWith(bucketName + ".")) {
+      // 1) virtual-hosted style: bucketName.s3.amazonaws.com/key or bucketName.s3.region.amazonaws.com/key
+      if (host != null && host.startsWith(bucketName + ".")) {
         return Optional.of(normalizedPath);
       }
-      if ((host.startsWith("s3.") || "s3.amazonaws.com".equals(host)) && normalizedPath.startsWith(bucketName + "/")) {
-        return Optional.of(normalizedPath.substring(bucketName.length() + 1));
+
+      // 2) path-style: s3.amazonaws.com/bucketName/key or s3.region.amazonaws.com/bucketName/key
+      if (host != null && (host.startsWith("s3.") || "s3.amazonaws.com".equals(host))) {
+        if (normalizedPath.startsWith(bucketName + "/")) {
+          return Optional.of(normalizedPath.substring(bucketName.length() + 1));
+        }
       }
+
+      // 3) regional/alternate patterns: host like bucketName.s3-REGION.amazonaws.com
+      if (host != null && host.contains(bucketName + ".s3")) {
+        return Optional.of(normalizedPath);
+      }
+
+      // 4) fallback: if path contains /{bucketName}/..., extract after bucketName/
+      Pattern p = Pattern.compile("(^|/)" + Pattern.quote(bucketName) + "/(.+)$");
+      Matcher m = p.matcher(normalizedPath);
+      if (m.find()) {
+        return Optional.of(m.group(2));
+      }
+
+      // 5) if host contains the bucket name in some custom way and normalizedPath looks like a key, try using it
+      if (host != null && host.contains(bucketName) && !normalizedPath.isBlank()) {
+        log.debug("Host contains bucket name but none of the known patterns matched. Using full path as key: {}", normalizedPath);
+        return Optional.of(normalizedPath);
+      }
+
+      // Not resolvable (e.g., custom CDN domain). Best practice: store the object key at upload time and delete by that key.
+      log.debug("Unable to resolve object key from URL host='{}' path='{}'", host, path);
       return Optional.empty();
     } catch (IllegalArgumentException exception) {
       log.debug("Skip deleting unmanaged url {}", imgUrl, exception);
       return Optional.empty();
     }
   }
+
+  // Note: Best practice — when uploading, persist the generated object key (e.g., UUID + extension) to your DB.
+  // Use that stored key to delete the object later instead of parsing the public URL (avoids CDN/custom domain issues).
 }
