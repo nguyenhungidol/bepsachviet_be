@@ -10,6 +10,8 @@ public class UserResponse {
   private String userId;
   private String email;
   private String name;
+  private String phoneNumber;
+  private String address;
   private Timestamp createdAt;
   private Timestamp updatedAt;
   private String role;
