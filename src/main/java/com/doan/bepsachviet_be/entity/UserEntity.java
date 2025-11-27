@@ -37,6 +37,12 @@ public class UserEntity {
   private String password;
   private String name;
   private String role;
+  private String phoneNumber;
+  private String address;
+
+  private String resetToken;
+
+  private Timestamp resetTokenExpiry;
 
   @CreationTimestamp
   @Column(updatable = false)
