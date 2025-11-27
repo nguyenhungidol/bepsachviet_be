@@ -36,11 +36,13 @@ public class SecurityConfig {
   public SecurityFilterChain securityFilterChain (HttpSecurity httpSecurity) throws Exception {
     httpSecurity.cors(Customizer.withDefaults())
         .csrf(AbstractHttpConfigurer::disable)
-        .authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/encode", "/registers", "/upload").permitAll()
+        .cors(Customizer.withDefaults())
+        .authorizeHttpRequests(auth -> auth.requestMatchers("/login", "/encode", "/registers", "/upload", "/forgot-password", "/reset-password").permitAll()
             .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/posts", "/posts/**").permitAll()
             .requestMatchers("/admin/**").hasRole("ADMIN")
+            .requestMatchers("/cart/**").authenticated()
             .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
