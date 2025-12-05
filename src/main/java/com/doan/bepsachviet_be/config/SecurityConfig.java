@@ -41,8 +41,12 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/categories", "/categories/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/products", "/products/**").permitAll()
             .requestMatchers(HttpMethod.GET, "/posts", "/posts/**").permitAll()
+            .requestMatchers("/payment/momo/ipn-handler", "/payment/momo/return").permitAll()
+            .requestMatchers("/payment/momo/create").authenticated()
             .requestMatchers("/admin/**").hasRole("ADMIN")
             .requestMatchers("/cart/**").authenticated()
+            .requestMatchers(HttpMethod.POST, "/orders").authenticated()
+            .requestMatchers("/orders/**").authenticated()
             .anyRequest().authenticated())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
@@ -73,9 +77,9 @@ public class SecurityConfig {
 
   @Bean
   public AuthenticationManager authenticationManager(){
-    DaoAuthenticationProvider authprovider = new DaoAuthenticationProvider();
-    authprovider.setUserDetailsService(appUserDetailService);
-    authprovider.setPasswordEncoder(passwordEncoder());
-    return new ProviderManager(authprovider);
+    DaoAuthenticationProvider providential = new DaoAuthenticationProvider();
+    providential.setUserDetailsService(appUserDetailService);
+    providential.setPasswordEncoder(passwordEncoder());
+    return new ProviderManager(providential);
   }
 }
