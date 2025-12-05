@@ -1,7 +1,8 @@
 package com.doan.bepsachviet_be.io.Request;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import java.math.BigDecimal;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,18 +12,13 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class ProductRequest {
+public class OrderItemRequest {
+
   @NotBlank(message = "Product ID is required")
   private String productId;
 
-  @NotBlank(message = "Product name is required")
-  private String name;
-
-  private String description;
-  private String imageSrc;
-  private BigDecimal price;
-  private String ocUrl;
-  private Integer stockQuantity;
-  private String categoryId;
+  @NotNull(message = "Quantity is required")
+  @Min(value = 1, message = "Quantity must be at least 1")
+  private Integer quantity;
 }
 

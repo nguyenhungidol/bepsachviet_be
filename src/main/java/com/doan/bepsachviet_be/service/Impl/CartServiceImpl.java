@@ -51,11 +51,27 @@ public class CartServiceImpl implements CartService {
     CartEntity cart = getOrCreateCart(user);
     ProductEntity product = getProductByProductId(request.getProductId());
 
+    // Check stock availability
+    if (product.getStockQuantity() == null || product.getStockQuantity() <= 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is out of stock");
+    }
+
     CartItemEntity cartItem = cartItemRepository.findByCartAndProduct(cart, product)
         .orElse(null);
 
+    int newQuantity = request.getQuantity();
     if (cartItem != null) {
-      cartItem.setQuantity(cartItem.getQuantity() + request.getQuantity());
+      newQuantity = cartItem.getQuantity() + request.getQuantity();
+    }
+
+    // Validate total quantity against stock
+    if (newQuantity > product.getStockQuantity()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Insufficient stock. Available: " + product.getStockQuantity() + ", requested: " + newQuantity);
+    }
+
+    if (cartItem != null) {
+      cartItem.setQuantity(newQuantity);
     } else {
       cartItem = CartItemEntity.builder()
           .cart(cart)
@@ -84,6 +100,17 @@ public class CartServiceImpl implements CartService {
 
     if (!cartItem.getCart().getId().equals(cart.getId())) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This cart item does not belong to you");
+    }
+
+    // Check stock availability
+    ProductEntity product = cartItem.getProduct();
+    if (product.getStockQuantity() == null || product.getStockQuantity() <= 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is out of stock");
+    }
+
+    if (request.getQuantity() > product.getStockQuantity()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Insufficient stock. Available: " + product.getStockQuantity() + ", requested: " + request.getQuantity());
     }
 
     cartItem.setQuantity(request.getQuantity());
@@ -158,17 +185,33 @@ public class CartServiceImpl implements CartService {
         continue;
       }
 
+      // Check stock availability
+      if (product.getStockQuantity() == null || product.getStockQuantity() <= 0) {
+        continue; // Skip out of stock products
+      }
+
       CartItemEntity existingItem = cartItemRepository.findByCartAndProduct(cart, product)
           .orElse(null);
 
+      int newQuantity = itemRequest.getQuantity();
       if (existingItem != null) {
-        existingItem.setQuantity(existingItem.getQuantity() + itemRequest.getQuantity());
+        newQuantity = existingItem.getQuantity() + itemRequest.getQuantity();
+      }
+
+      // Validate against stock
+      if (newQuantity > product.getStockQuantity()) {
+        // Cap quantity at available stock
+        newQuantity = product.getStockQuantity();
+      }
+
+      if (existingItem != null) {
+        existingItem.setQuantity(newQuantity);
         cartItemRepository.save(existingItem);
       } else {
         CartItemEntity newItem = CartItemEntity.builder()
             .cart(cart)
             .product(product)
-            .quantity(itemRequest.getQuantity())
+            .quantity(newQuantity)
             .build();
         cart.getItems().add(newItem);
         cartItemRepository.save(newItem);
