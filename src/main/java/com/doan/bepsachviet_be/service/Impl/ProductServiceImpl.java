@@ -9,7 +9,6 @@ import com.doan.bepsachviet_be.repository.ProductRepository;
 import com.doan.bepsachviet_be.service.FileUploadService;
 import com.doan.bepsachviet_be.service.ProductService;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,15 +26,24 @@ public class ProductServiceImpl implements ProductService {
   @Override
   public ProductResponse createProduct(ProductRequest request) {
     validateRequest(request);
+
+    // Check if product code already exists
+    if (productRepository.findByProductId(request.getProductId()).isPresent()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+          "Product code already exists: " + request.getProductId());
+    }
+
     CategoryEntity category = categoryRepository.findByCategoryId(request.getCategoryId())
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category not found"));
+
     ProductEntity entity = ProductEntity.builder()
-        .productId(UUID.randomUUID().toString())
+        .productId(request.getProductId())
         .name(request.getName())
         .description(request.getDescription())
         .imageSrc(request.getImageSrc())
         .price(request.getPrice())
         .ocUrl(request.getOcUrl())
+        .stockQuantity(request.getStockQuantity() != null ? request.getStockQuantity() : 0)
         .category(category)
         .build();
     return convertToResponse(productRepository.save(entity));
@@ -55,6 +63,7 @@ public class ProductServiceImpl implements ProductService {
     handleImageMutation(entity, request.getImageSrc());
     entity.setPrice(request.getPrice() != null ? request.getPrice() : entity.getPrice());
     entity.setOcUrl(request.getOcUrl() != null ? request.getOcUrl() : entity.getOcUrl());
+    entity.setStockQuantity(request.getStockQuantity() != null ? request.getStockQuantity() : entity.getStockQuantity());
     return convertToResponse(productRepository.save(entity));
   }
 
@@ -87,6 +96,9 @@ public class ProductServiceImpl implements ProductService {
   }
 
   private void validateRequest(ProductRequest request) {
+    if (request.getProductId() == null || request.getProductId().isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product code is required");
+    }
     if (request.getName() == null || request.getName().isBlank()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product name is required");
     }
@@ -106,6 +118,7 @@ public class ProductServiceImpl implements ProductService {
         .imageSrc(entity.getImageSrc())
         .price(entity.getPrice())
         .ocUrl(entity.getOcUrl())
+        .stockQuantity(entity.getStockQuantity())
         .categoryId(entity.getCategory().getCategoryId())
         .categoryName(entity.getCategory().getName())
         .createdAt(entity.getCreatedAt())

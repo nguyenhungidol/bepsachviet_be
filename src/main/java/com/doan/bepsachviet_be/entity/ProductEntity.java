@@ -50,6 +50,9 @@ public class ProductEntity {
   @Column
   private String ocUrl;
 
+  @Column(nullable = false)
+  private Integer stockQuantity = 0;
+
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "category_id", nullable = false)
   private CategoryEntity category;
