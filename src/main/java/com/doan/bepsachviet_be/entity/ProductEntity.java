@@ -51,7 +51,15 @@ public class ProductEntity {
   private String ocUrl;
 
   @Column(nullable = false)
+  @Builder.Default
   private Integer stockQuantity = 0;
+
+  @Column(nullable = false)
+  @Builder.Default
+  private Boolean isActive = true;
+
+  @Column
+  private Timestamp deletedAt;
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "category_id", nullable = false)

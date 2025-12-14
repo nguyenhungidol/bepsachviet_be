@@ -18,6 +18,8 @@ public class CartItemResponse {
   private BigDecimal productPrice;
   private Integer quantity;
   private BigDecimal subtotal;
+  private Boolean isProductActive; // To check if product is still available
+  private Integer availableStock; // Current stock available
   private Timestamp createdAt;
   private Timestamp updatedAt;
 }

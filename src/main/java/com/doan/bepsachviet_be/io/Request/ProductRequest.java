@@ -23,6 +23,7 @@ public class ProductRequest {
   private BigDecimal price;
   private String ocUrl;
   private Integer stockQuantity;
+  private Boolean isActive;
   private String categoryId;
 }
 
