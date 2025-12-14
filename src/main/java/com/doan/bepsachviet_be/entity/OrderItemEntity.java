@@ -29,10 +29,16 @@ public class OrderItemEntity {
   private ProductEntity product;
 
   @Column(nullable = false)
+  private String productName; // Snapshot of product name at time of order
+
+  @Column
+  private String productImage; // Snapshot of product image at time of order
+
+  @Column(nullable = false)
   private Integer quantity;
 
   @Column(nullable = false, precision = 19, scale = 4)
-  private BigDecimal price;
+  private BigDecimal price; // Snapshot of product price at time of order
 
   @Column(nullable = false, precision = 19, scale = 4)
   private BigDecimal subtotal;

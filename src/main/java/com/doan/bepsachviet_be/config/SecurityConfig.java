@@ -43,6 +43,9 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/posts", "/posts/**").permitAll()
             .requestMatchers("/payment/momo/ipn-handler", "/payment/momo/return").permitAll()
             .requestMatchers("/payment/momo/create").authenticated()
+            .requestMatchers("/ws/**").permitAll() // WebSocket endpoint
+            .requestMatchers("/chat/**").permitAll() // Chat endpoints (authentication checked in controller)
+            .requestMatchers("/admin/chat/**").hasRole("ADMIN") // Admin chat endpoints
             .requestMatchers("/admin/**").hasRole("ADMIN")
             .requestMatchers("/cart/**").authenticated()
             .requestMatchers(HttpMethod.POST, "/orders").authenticated()

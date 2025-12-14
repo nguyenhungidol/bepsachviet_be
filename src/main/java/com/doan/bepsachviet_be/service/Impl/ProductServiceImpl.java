@@ -64,24 +64,34 @@ public class ProductServiceImpl implements ProductService {
     entity.setPrice(request.getPrice() != null ? request.getPrice() : entity.getPrice());
     entity.setOcUrl(request.getOcUrl() != null ? request.getOcUrl() : entity.getOcUrl());
     entity.setStockQuantity(request.getStockQuantity() != null ? request.getStockQuantity() : entity.getStockQuantity());
+    if (request.getIsActive() != null) {
+      entity.setIsActive(request.getIsActive());
+      // Nếu đang khôi phục (active = true) thì xóa luôn ngày deletedAt cũ đi
+      if (Boolean.TRUE.equals(request.getIsActive())) {
+        entity.setDeletedAt(null);
+      }
+    }
     return convertToResponse(productRepository.save(entity));
   }
 
   @Override
   public List<ProductResponse> listProducts() {
-    return productRepository.findAll().stream().map(this::convertToResponse).collect(Collectors.toList());
+    return productRepository.findAllByIsActive(true)
+        .stream()
+        .map(this::convertToResponse)
+        .collect(Collectors.toList());
   }
 
   @Override
   public ProductResponse getProduct(String productId) {
-    return productRepository.findByProductId(productId)
+    return productRepository.findByProductIdAndIsActive(productId, true)
         .map(this::convertToResponse)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
   }
 
   @Override
   public List<ProductResponse> listProductsByCategory(String categoryId) {
-    return productRepository.findAllByCategory_CategoryId(categoryId)
+    return productRepository.findAllByCategory_CategoryIdAndIsActive(categoryId, true)
         .stream()
         .map(this::convertToResponse)
         .collect(Collectors.toList());
@@ -91,8 +101,22 @@ public class ProductServiceImpl implements ProductService {
   public void deleteProduct(String productId) {
     ProductEntity entity = productRepository.findByProductId(productId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
-    cleanupImage(entity.getImageSrc());
-    productRepository.delete(entity);
+
+    // Soft delete: mark as inactive instead of physically deleting
+    entity.setIsActive(false);
+    entity.setDeletedAt(new java.sql.Timestamp(System.currentTimeMillis()));
+    productRepository.save(entity);
+
+    // Note: We keep the image on S3 to maintain data integrity for historical orders
+    // Images are NOT deleted during soft delete to preserve order history
+  }
+
+  @Override
+  public List<ProductResponse> listAllProductsForAdmin() {
+    return productRepository.findAll()
+        .stream()
+        .map(this::convertToResponse)
+        .collect(Collectors.toList());
   }
 
   private void validateRequest(ProductRequest request) {
@@ -119,6 +143,8 @@ public class ProductServiceImpl implements ProductService {
         .price(entity.getPrice())
         .ocUrl(entity.getOcUrl())
         .stockQuantity(entity.getStockQuantity())
+        .isActive(entity.getIsActive())
+        .deletedAt(entity.getDeletedAt())
         .categoryId(entity.getCategory().getCategoryId())
         .categoryName(entity.getCategory().getName())
         .createdAt(entity.getCreatedAt())

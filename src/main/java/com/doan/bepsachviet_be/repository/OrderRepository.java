@@ -23,5 +23,18 @@ public interface OrderRepository extends JpaRepository<OrderEntity, Long> {
 
   Page<OrderEntity> findByUser_UserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
 
-  List<OrderEntity> findByStatusAndCreatedAtBefore(OrderStatus status, Timestamp timestamp);}
+  List<OrderEntity> findByStatusAndCreatedAtBefore(OrderStatus status, Timestamp timestamp);
+
+  /**
+   * Count orders created on or after the given timestamp
+   * Used for generating sequential order numbers
+   */
+  long countByCreatedAtGreaterThanEqual(Timestamp timestamp);
+
+  /**
+   * Find the last order created on a specific date
+   * Used to determine the next order number for the day
+   */
+  Optional<OrderEntity> findFirstByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(Timestamp timestamp);
+}
 

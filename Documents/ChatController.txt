@@ -1,0 +1,77 @@
+// ChatController.java - Customer Chat API
+}
+  }
+    return ResponseEntity.ok(response);
+    log.info("Conversation closed: {}", conversationId);
+    ChatConversationResponse response = chatService.closeConversation(conversationId, userEmail);
+    String userEmail = authentication != null ? authentication.getName() : null;
+      Authentication authentication) {
+      @PathVariable String conversationId,
+  public ResponseEntity<ChatConversationResponse> closeConversation(
+  @PostMapping("/conversations/{conversationId}/close")
+
+  }
+    return ResponseEntity.ok(messages);
+    List<ChatMessageResponse> messages = chatService.getMessages(conversationId, userEmail);
+    String userEmail = authentication != null ? authentication.getName() : null;
+      Authentication authentication) {
+      @PathVariable String conversationId,
+  public ResponseEntity<List<ChatMessageResponse>> getMessages(
+  @GetMapping("/conversations/{conversationId}/messages")
+
+  }
+    return ResponseEntity.ok(response);
+    log.info("Message sent in conversation: {}", conversationId);
+    ChatMessageResponse response = chatService.sendMessage(conversationId, request, senderEmail, false);
+    String senderEmail = authentication != null ? authentication.getName() : null;
+      Authentication authentication) {
+      @Valid @RequestBody SendChatMessageRequest request,
+      @PathVariable String conversationId,
+  public ResponseEntity<ChatMessageResponse> sendMessage(
+  @PostMapping("/conversations/{conversationId}/messages")
+
+  }
+    return ResponseEntity.ok(response);
+    ChatConversationResponse response = chatService.getCurrentConversation(userEmail, guestEmail, guestPhone);
+    String userEmail = authentication != null ? authentication.getName() : null;
+      Authentication authentication) {
+      @RequestParam(required = false) String guestPhone,
+      @RequestParam(required = false) String guestEmail,
+  public ResponseEntity<ChatConversationResponse> getCurrentConversation(
+  @GetMapping("/conversations/me")
+
+  }
+    return ResponseEntity.ok(response);
+    log.info("Conversation started: {}", response.getConversationId());
+    ChatConversationResponse response = chatService.startConversation(request, userEmail);
+    String userEmail = authentication != null ? authentication.getName() : null;
+      Authentication authentication) {
+      @Valid @RequestBody StartConversationRequest request,
+  public ResponseEntity<ChatConversationResponse> startConversation(
+  @PostMapping("/conversations")
+
+  private final ChatService chatService;
+
+public class ChatController {
+@Slf4j
+@RequiredArgsConstructor
+@RequestMapping("/api/v1.0/chat")
+@RestController
+
+import java.util.List;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
+import com.doan.bepsachviet_be.service.ChatService;
+import com.doan.bepsachviet_be.io.Response.ChatMessageResponse;
+import com.doan.bepsachviet_be.io.Response.ChatConversationResponse;
+import com.doan.bepsachviet_be.io.Request.StartConversationRequest;
+import com.doan.bepsachviet_be.io.Request.SendChatMessageRequest;
+
+package com.doan.bepsachviet_be.controller;
+
+// Path: src/main/java/com/doan/bepsachviet_be/controller/ChatController.java
+

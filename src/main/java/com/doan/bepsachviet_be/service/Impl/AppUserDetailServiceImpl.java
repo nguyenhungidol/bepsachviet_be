@@ -20,6 +20,11 @@ public class AppUserDetailServiceImpl implements UserDetailsService {
   public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
     UserEntity existingUser = userRepository.findByEmail(email)
         .orElseThrow(() -> new UsernameNotFoundException("Email not found for the email: " + email));
-    return new User(existingUser.getEmail(), existingUser.getPassword(), Collections.singleton(new SimpleGrantedAuthority(existingUser.getRole())));
+    String role = existingUser.getRole();
+    // Ensure role has ROLE_ prefix for Spring Security hasRole() to work
+    if (role != null && !role.startsWith("ROLE_")) {
+      role = "ROLE_" + role;
+    }
+    return new User(existingUser.getEmail(), existingUser.getPassword(), Collections.singleton(new SimpleGrantedAuthority(role)));
   }
 }
