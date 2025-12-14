@@ -38,6 +38,11 @@ public class ProductController {
     return productService.listProductsByCategory(categoryId);
   }
 
+  @GetMapping("/admin/products")
+  public List<ProductResponse> listAllProductsAdmin() {
+    return productService.listAllProductsForAdmin();
+  }
+
   @PostMapping("/admin/products")
   @ResponseStatus(HttpStatus.CREATED)
   public ProductResponse createProduct(@Valid @RequestBody ProductRequest request) {

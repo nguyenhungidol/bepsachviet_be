@@ -15,6 +15,7 @@ import com.doan.bepsachviet_be.repository.ProductRepository;
 import com.doan.bepsachviet_be.repository.UserRepository;
 import com.doan.bepsachviet_be.service.EmailService;
 import com.doan.bepsachviet_be.service.OrderService;
+import com.doan.bepsachviet_be.util.OrderIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,9 +25,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +39,7 @@ public class OrderServiceImpl implements OrderService {
   private final ProductRepository productRepository;
   private final UserRepository userRepository;
   private final EmailService emailService;
+  private final OrderIdGenerator orderIdGenerator;
 
   @Override
   @Transactional
@@ -45,11 +48,17 @@ public class OrderServiceImpl implements OrderService {
     UserEntity user = userRepository.findByEmail(email)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-    // Validate stock availability for all items first
+    // Validate stock availability and product status for all items first
     for (OrderItemRequest itemRequest : request.getItems()) {
       ProductEntity product = productRepository.findByProductId(itemRequest.getProductId())
           .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
               "Product not found: " + itemRequest.getProductId()));
+
+      // Check if product is active (soft delete check)
+      if (product.getIsActive() == null || !product.getIsActive()) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            "Product is no longer available: " + product.getName());
+      }
 
       if (product.getStockQuantity() == null || product.getStockQuantity() < itemRequest.getQuantity()) {
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -59,9 +68,12 @@ public class OrderServiceImpl implements OrderService {
       }
     }
 
+    // Generate sequential order ID for today
+    String orderId = generateNextOrderId();
+
     // Create order
     OrderEntity order = OrderEntity.builder()
-        .orderId(UUID.randomUUID().toString())
+        .orderId(orderId)
         .user(user)
         .status(OrderStatus.PENDING)
         .deliveryName(request.getDeliveryName())
@@ -87,11 +99,14 @@ public class OrderServiceImpl implements OrderService {
       product.setStockQuantity(product.getStockQuantity() - itemRequest.getQuantity());
       productRepository.save(product);
 
+      // Store snapshot data to preserve historical accuracy
       OrderItemEntity orderItem = OrderItemEntity.builder()
           .order(order)
           .product(product)
+          .productName(product.getName()) // Snapshot of name
+          .productImage(product.getImageSrc()) // Snapshot of image
           .quantity(itemRequest.getQuantity())
-          .price(product.getPrice())
+          .price(product.getPrice()) // Snapshot of price
           .subtotal(subtotal)
           .build();
 
@@ -222,6 +237,24 @@ public class OrderServiceImpl implements OrderService {
         .price(item.getPrice())
         .subtotal(item.getSubtotal())
         .build();
+  }
+
+  /**
+   * Generates the next sequential order ID for today
+   * Format: ORD-YYMMDD-NNNN (e.g., ORD-251207-0199)
+   */
+  private synchronized String generateNextOrderId() {
+    // Get start of today
+    LocalDate today = LocalDate.now();
+    Timestamp startOfDay = Timestamp.valueOf(today.atStartOfDay());
+
+    // Count orders created today
+    long todayOrderCount = orderRepository.countByCreatedAtGreaterThanEqual(startOfDay);
+
+    // Generate order number (1-based, so add 1 to count)
+    int orderNumber = (int) todayOrderCount + 1;
+
+    return orderIdGenerator.generateOrderId(orderNumber);
   }
 
 //  @Override

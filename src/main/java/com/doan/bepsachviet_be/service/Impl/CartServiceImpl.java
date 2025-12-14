@@ -51,6 +51,11 @@ public class CartServiceImpl implements CartService {
     CartEntity cart = getOrCreateCart(user);
     ProductEntity product = getProductByProductId(request.getProductId());
 
+    // Check if product is active (soft delete check)
+    if (product.getIsActive() == null || !product.getIsActive()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is no longer available");
+    }
+
     // Check stock availability
     if (product.getStockQuantity() == null || product.getStockQuantity() <= 0) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is out of stock");
@@ -102,8 +107,13 @@ public class CartServiceImpl implements CartService {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This cart item does not belong to you");
     }
 
-    // Check stock availability
+    // Check if product is still active
     ProductEntity product = cartItem.getProduct();
+    if (product.getIsActive() == null || !product.getIsActive()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is no longer available");
+    }
+
+    // Check stock availability
     if (product.getStockQuantity() == null || product.getStockQuantity() <= 0) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Product is out of stock");
     }
@@ -185,6 +195,11 @@ public class CartServiceImpl implements CartService {
         continue;
       }
 
+      // Skip inactive (soft deleted) products
+      if (product.getIsActive() == null || !product.getIsActive()) {
+        continue;
+      }
+
       // Check stock availability
       if (product.getStockQuantity() == null || product.getStockQuantity() <= 0) {
         continue; // Skip out of stock products
@@ -263,6 +278,8 @@ public class CartServiceImpl implements CartService {
         .productPrice(product.getPrice())
         .quantity(item.getQuantity())
         .subtotal(subtotal)
+        .isProductActive(product.getIsActive() != null && product.getIsActive())
+        .availableStock(product.getStockQuantity())
         .createdAt(item.getCreatedAt())
         .updatedAt(item.getUpdatedAt())
         .build();

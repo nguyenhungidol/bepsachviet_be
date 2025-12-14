@@ -19,6 +19,8 @@ public class ProductResponse {
   private BigDecimal price;
   private String ocUrl;
   private Integer stockQuantity;
+  private Boolean isActive;
+  private Timestamp deletedAt;
   private String categoryId;
   private String categoryName;
   private Timestamp createdAt;
