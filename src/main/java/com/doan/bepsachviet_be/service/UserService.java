@@ -21,4 +21,9 @@ public interface UserService {
   // Update user info
   UserResponse updateUserInfo(String email, UpdateUserInfoRequest request);
   UserResponse getUserInfo(String email);
+
+  // Lock/Unlock user
+  UserResponse lockUser(String userId, String reason);
+  UserResponse unlockUser(String userId);
+  boolean isUserLocked(String email);
 }
