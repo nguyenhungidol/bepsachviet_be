@@ -44,6 +44,14 @@ public class UserEntity {
 
   private Timestamp resetTokenExpiry;
 
+  @Column(nullable = false)
+  @Builder.Default
+  private Boolean isLocked = false;
+
+  private Timestamp lockedAt;
+
+  private String lockReason;
+
   @CreationTimestamp
   @Column(updatable = false)
   private Timestamp createdAt;

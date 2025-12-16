@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -20,6 +21,15 @@ public class AppUserDetailServiceImpl implements UserDetailsService {
   public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
     UserEntity existingUser = userRepository.findByEmail(email)
         .orElseThrow(() -> new UsernameNotFoundException("Email not found for the email: " + email));
+
+    // Check if user account is locked
+    if (Boolean.TRUE.equals(existingUser.getIsLocked())) {
+      String lockMessage = existingUser.getLockReason() != null
+          ? "Account is locked: " + existingUser.getLockReason()
+          : "Account is locked";
+      throw new LockedException(lockMessage);
+    }
+
     String role = existingUser.getRole();
     // Ensure role has ROLE_ prefix for Spring Security hasRole() to work
     if (role != null && !role.startsWith("ROLE_")) {

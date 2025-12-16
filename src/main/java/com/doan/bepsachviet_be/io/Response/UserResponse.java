@@ -15,4 +15,7 @@ public class UserResponse {
   private Timestamp createdAt;
   private Timestamp updatedAt;
   private String role;
+  private Boolean isLocked;
+  private Timestamp lockedAt;
+  private String lockReason;
 }
