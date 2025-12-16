@@ -2,6 +2,7 @@ package com.doan.bepsachviet_be.controller;
 
 import com.doan.bepsachviet_be.io.Request.ChangePasswordRequest;
 import com.doan.bepsachviet_be.io.Request.ForgotPasswordRequest;
+import com.doan.bepsachviet_be.io.Request.LockUserRequest;
 import com.doan.bepsachviet_be.io.Request.ResetPasswordRequest;
 import com.doan.bepsachviet_be.io.Request.UpdateUserInfoRequest;
 import com.doan.bepsachviet_be.io.Request.UserRequest;
@@ -103,6 +104,26 @@ public class UserController {
       return userService.updateUserInfo(email, request);
     } catch (Exception e) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to update profile: " + e.getMessage());
+    }
+  }
+
+  // Lock/Unlock User Endpoints (Admin only)
+  @PostMapping("/admin/users/{userId}/lock")
+  public UserResponse lockUser(@PathVariable String userId, @RequestBody(required = false) LockUserRequest request) {
+    try {
+      String reason = (request != null && request.getReason() != null) ? request.getReason() : "Account locked by administrator";
+      return userService.lockUser(userId, reason);
+    } catch (Exception e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to lock user: " + e.getMessage());
+    }
+  }
+
+  @PostMapping("/admin/users/{userId}/unlock")
+  public UserResponse unlockUser(@PathVariable String userId) {
+    try {
+      return userService.unlockUser(userId);
+    } catch (Exception e) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unable to unlock user: " + e.getMessage());
     }
   }
 }

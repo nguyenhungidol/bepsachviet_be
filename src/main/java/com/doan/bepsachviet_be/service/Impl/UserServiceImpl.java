@@ -43,6 +43,9 @@ public class UserServiceImpl implements UserService {
         .role(newUser.getRole())
         .createdAt(newUser.getCreatedAt())
         .updatedAt(newUser.getUpdatedAt())
+        .isLocked(newUser.getIsLocked())
+        .lockedAt(newUser.getLockedAt())
+        .lockReason(newUser.getLockReason())
         .build();
   }
 
@@ -156,6 +159,44 @@ public class UserServiceImpl implements UserService {
     UserEntity user = userRepository.findByEmail(email)
         .orElseThrow(() -> new UsernameNotFoundException("User not found for email: " + email));
     return convertToResponse(user);
+  }
+
+  @Override
+  public UserResponse lockUser(String userId, String reason) {
+    UserEntity user = userRepository.findByUserId(userId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+
+    // Prevent locking admin accounts
+    if ("ADMIN".equalsIgnoreCase(user.getRole())) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot lock admin accounts");
+    }
+
+    user.setIsLocked(true);
+    user.setLockedAt(new Timestamp(System.currentTimeMillis()));
+    user.setLockReason(reason);
+
+    user = userRepository.save(user);
+    return convertToResponse(user);
+  }
+
+  @Override
+  public UserResponse unlockUser(String userId) {
+    UserEntity user = userRepository.findByUserId(userId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with id: " + userId));
+
+    user.setIsLocked(false);
+    user.setLockedAt(null);
+    user.setLockReason(null);
+
+    user = userRepository.save(user);
+    return convertToResponse(user);
+  }
+
+  @Override
+  public boolean isUserLocked(String email) {
+    UserEntity user = userRepository.findByEmail(email)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found for email: " + email));
+    return Boolean.TRUE.equals(user.getIsLocked());
   }
 }
 
