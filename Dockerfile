@@ -1,14 +1,15 @@
-# Bước 1: Build dự án bằng Maven
-FROM maven:3.8.5-openjdk-17 AS build
+# --- Giai đoạn 1: Build file .jar ---
+# Dùng Maven kèm Java 21 để build
+FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 COPY . .
-# Lệnh này sẽ tạo ra file .jar trong thư mục target, bỏ qua test để build nhanh hơn
 RUN mvn clean package -DskipTests
 
-# Bước 2: Chạy ứng dụng bằng JDK rút gọn (cho nhẹ)
-FROM openjdk:21-jdk-slim
+# --- Giai đoạn 2: Chạy ứng dụng ---
+# Dùng JRE 21 siêu nhẹ của Eclipse Temurin
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-# Copy file .jar vừa build ở trên sang (dùng dấu * để không cần quan tâm tên version)
+# Copy file .jar từ giai đoạn build sang
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","app.jar"]
